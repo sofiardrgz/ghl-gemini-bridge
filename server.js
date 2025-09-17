@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 
 // Import router + tools from ghl-actions.js
 const { router: ghlRoutes, AVAILABLE_TOOLS } = require('./routes/ghl-actions');
@@ -27,6 +28,32 @@ app.post('/tools/list', (req, res) => {
   }));
 
   res.json({ tools });
+});
+
+// 🔧 Tools call bridge (MCP requirement)
+app.post('/tools/call', async (req, res) => {
+  try {
+    const { name, arguments: parameters, locationId } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Missing tool name' });
+    }
+
+    // Forward request to /api/ghl/execute
+    const response = await axios.post(
+      `${req.protocol}://${req.get('host')}/api/ghl/execute`,
+      { tool: name, parameters, locationId },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
+    res.json(response.data);
+  } catch (err) {
+    console.error('❌ Error in /tools/call:', err.response?.data || err.message);
+    res.status(500).json({
+      success: false,
+      error: err.response?.data?.message || err.message
+    });
+  }
 });
 
 // Health check
