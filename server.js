@@ -6,7 +6,24 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Enhanced CORS configuration to fix 406 error
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: false
+}));
+
+// Middleware to handle Accept headers (fixes 406 error)
+app.use((req, res, next) => {
+  if (!req.headers.accept || req.headers.accept === '*/*') {
+    req.headers.accept = 'application/json, text/event-stream';
+  }
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  next();
+});
+
 app.use(express.json());
 app.use(express.static('.'));
 
@@ -103,6 +120,8 @@ const TOOLS = [
 
 async function executeGHLTool(toolName, parameters = {}) {
   try {
+    console.log(`Executing GHL tool: ${toolName} with params:`, parameters);
+    
     const headers = {
       'Authorization': `Bearer ${process.env.GHL_PIT_TOKEN}`,
       'locationId': LOCATION_ID,
@@ -119,8 +138,10 @@ async function executeGHLTool(toolName, parameters = {}) {
       timeout: 30000 
     });
     
+    console.log(`GHL tool ${toolName} executed successfully`);
     return response.data;
   } catch (error) {
+    console.error(`GHL tool ${toolName} failed:`, error.response?.data || error.message);
     throw new Error(`GHL execution failed: ${error.response?.data?.message || error.message}`);
   }
 }
@@ -129,7 +150,7 @@ async function executeGHLTool(toolName, parameters = {}) {
 
 // Initialize - ChatGPT calls this first
 app.post('/initialize', (req, res) => {
-  console.log('📡 ChatGPT initializing MCP connection');
+  console.log('ChatGPT initializing MCP connection');
   res.json({
     protocolVersion: "2024-11-05",
     capabilities: {
@@ -144,7 +165,7 @@ app.post('/initialize', (req, res) => {
 
 // List tools - ChatGPT calls this to get available tools
 app.post('/tools/list', (req, res) => {
-  console.log('📋 ChatGPT requesting tool list');
+  console.log('ChatGPT requesting tool list');
   res.json({
     tools: TOOLS
   });
@@ -153,9 +174,19 @@ app.post('/tools/list', (req, res) => {
 // Call tool - ChatGPT calls this to execute a tool
 app.post('/tools/call', async (req, res) => {
   try {
-    const { name, arguments: args } = req.body.params;
+    const { name, arguments: args } = req.body.params || {};
     
-    console.log(`🔧 ChatGPT calling tool: ${name}`, args);
+    if (!name) {
+      return res.status(400).json({
+        content: [{
+          type: "text",
+          text: "Error: Tool name is required"
+        }],
+        isError: true
+      });
+    }
+    
+    console.log(`ChatGPT calling tool: ${name}`, args);
     
     const result = await executeGHLTool(name, args || {});
     
@@ -170,13 +201,13 @@ app.post('/tools/call', async (req, res) => {
     });
     
   } catch (error) {
-    console.error(`❌ Tool call failed: ${error.message}`);
+    console.error(`Tool call failed: ${error.message}`);
     
     res.json({
       content: [
         {
           type: "text",
-          text: `Error executing ${req.body.params?.name}: ${error.message}`
+          text: `Error executing ${req.body.params?.name || 'unknown tool'}: ${error.message}`
         }
       ],
       isError: true
@@ -184,7 +215,6 @@ app.post('/tools/call', async (req, res) => {
   }
 });
 
-// OAuth configuration endpoint (required by ChatGPT)
 // OAuth configuration endpoint (required by ChatGPT)
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
   const baseUrl = 'https://ghl-gemini-bridge-1.onrender.com';
@@ -201,7 +231,6 @@ app.get('/.well-known/oauth-authorization-server', (req, res) => {
 // OAuth authorize endpoint (mock for ChatGPT compatibility)
 app.get('/oauth/authorize', (req, res) => {
   const { client_id, redirect_uri, state } = req.query;
-  // Mock authorization - redirect back with fake code
   const authCode = 'mock_auth_code_12345';
   res.redirect(`${redirect_uri}?code=${authCode}&state=${state}`);
 });
@@ -221,7 +250,8 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     service: 'SmartSquatch ChatGPT MCP Server',
     timestamp: new Date().toISOString(),
-    toolCount: TOOLS.length
+    toolCount: TOOLS.length,
+    ghlTokenConfigured: !!process.env.GHL_PIT_TOKEN
   });
 });
 
@@ -230,16 +260,61 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/chat.html');
 });
 
-// Error handling
+// Test endpoint for Custom GPT Actions
+app.post('/test', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'SmartSquatch server is working',
+      timestamp: new Date().toISOString(),
+      availableTools: TOOLS.map(t => t.name)
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Handle preflight OPTIONS requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  res.sendStatus(200);
+});
+
+// Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Server error:', error);
   res.status(500).json({
-    error: 'Internal server error'
+    error: 'Internal server error',
+    message: error.message
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    path: req.originalUrl,
+    availableEndpoints: [
+      'GET /',
+      'GET /health', 
+      'POST /initialize',
+      'POST /tools/list',
+      'POST /tools/call',
+      'POST /api/ghl/execute'
+    ]
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 SmartSquatch ChatGPT MCP Server running on port ${PORT}`);
-  console.log(`📡 Ready for ChatGPT MCP connections`);
-  console.log(`🛠️  Available tools: ${TOOLS.length}`);
+  console.log(`SmartSquatch ChatGPT MCP Server running on port ${PORT}`);
+  console.log(`Ready for ChatGPT MCP connections`);
+  console.log(`Available tools: ${TOOLS.length}`);
+  console.log(`GHL Token configured: ${!!process.env.GHL_PIT_TOKEN}`);
 });
+
+module.exports = app;
