@@ -4,7 +4,7 @@ const router = express.Router();
 
 const GHL_MCP_URL = 'https://services.leadconnectorhq.com/mcp/';
 
-// Force JSON headers
+// Always force JSON headers
 router.use((req, res, next) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,7 +12,7 @@ router.use((req, res, next) => {
   next();
 });
 
-// Full HighLevel MCP tool list
+// Full HighLevel MCP tool list (21 tools)
 const AVAILABLE_TOOLS = {
   // Calendars
   'calendars_get-calendar-events': { description: 'Get calendar events', requiredParams: [], optionalParams: ['calendarId', 'userId', 'groupId', 'startTime', 'endTime', 'limit'] },
@@ -128,7 +128,7 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Test
+// Test connection
 router.post('/test', async (req, res) => {
   try {
     const { locationId } = req.body;
@@ -167,11 +167,8 @@ router.post('/test', async (req, res) => {
   }
 });
 
-// ✅ Export both
+// ✅ Export both router + tools
 module.exports = {
-  router,
-  AVAILABLE_TOOLS
-};
   router,
   AVAILABLE_TOOLS
 };
