@@ -4,7 +4,7 @@ const router = express.Router();
 
 const GHL_MCP_URL = 'https://services.leadconnectorhq.com/mcp/';
 
-// Always force JSON headers
+// Force JSON headers
 router.use((req, res, next) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,32 +12,43 @@ router.use((req, res, next) => {
   next();
 });
 
-// Available GHL tools
+// Full HighLevel MCP tool list
 const AVAILABLE_TOOLS = {
-  'contacts_get-contacts': {
-    description: 'Fetch all contacts',
-    requiredParams: [],
-    optionalParams: ['limit', 'skip', 'query']
-  },
-  'contacts_create-contact': {
-    description: 'Create a new contact',
-    requiredParams: [],
-    optionalParams: ['firstName', 'lastName', 'email', 'phone', 'customFields']
-  },
-  'contacts_get-contact': {
-    description: 'Fetch contact details',
-    requiredParams: ['contactId'],
-    optionalParams: []
-  },
-  'locations_get-location': {
-    description: 'Get location details by ID',
-    requiredParams: [],
-    optionalParams: []
-  }
-  // … keep the rest of your tools here
+  // Calendars
+  'calendars_get-calendar-events': { description: 'Get calendar events', requiredParams: [], optionalParams: ['calendarId', 'userId', 'groupId', 'startTime', 'endTime', 'limit'] },
+  'calendars_get-appointment-notes': { description: 'Retrieve appointment notes', requiredParams: ['appointmentId'], optionalParams: [] },
+
+  // Contacts
+  'contacts_get-all-tasks': { description: 'Get all tasks for a contact', requiredParams: ['contactId'], optionalParams: [] },
+  'contacts_add-tags': { description: 'Add tags to a contact', requiredParams: ['contactId', 'tags'], optionalParams: [] },
+  'contacts_remove-tags': { description: 'Remove tags from a contact', requiredParams: ['contactId', 'tags'], optionalParams: [] },
+  'contacts_get-contact': { description: 'Fetch contact details', requiredParams: ['contactId'], optionalParams: [] },
+  'contacts_update-contact': { description: 'Update a contact', requiredParams: ['contactId'], optionalParams: ['firstName', 'lastName', 'email', 'phone', 'customFields'] },
+  'contacts_upsert-contact': { description: 'Update or create a contact', requiredParams: [], optionalParams: ['firstName', 'lastName', 'email', 'phone', 'customFields'] },
+  'contacts_create-contact': { description: 'Create a new contact', requiredParams: [], optionalParams: ['firstName', 'lastName', 'email', 'phone', 'customFields'] },
+  'contacts_get-contacts': { description: 'Fetch all contacts', requiredParams: [], optionalParams: ['limit', 'skip', 'query'] },
+
+  // Conversations
+  'conversations_search-conversation': { description: 'Search/filter/sort conversations', requiredParams: [], optionalParams: ['query', 'limit', 'skip'] },
+  'conversations_get-messages': { description: 'Retrieve messages by conversation ID', requiredParams: ['conversationId'], optionalParams: ['limit', 'skip'] },
+  'conversations_send-a-new-message': { description: 'Send a message to a conversation thread', requiredParams: ['conversationId', 'message'], optionalParams: ['type'] },
+
+  // Locations
+  'locations_get-location': { description: 'Get location details', requiredParams: [], optionalParams: [] },
+  'locations_get-custom-fields': { description: 'Retrieve custom fields', requiredParams: [], optionalParams: [] },
+
+  // Opportunities
+  'opportunities_search-opportunity': { description: 'Search for opportunities', requiredParams: [], optionalParams: ['query', 'pipelineId', 'stageId', 'limit', 'skip'] },
+  'opportunities_get-pipelines': { description: 'Fetch pipelines', requiredParams: [], optionalParams: [] },
+  'opportunities_get-opportunity': { description: 'Fetch opportunity details', requiredParams: ['opportunityId'], optionalParams: [] },
+  'opportunities_update-opportunity': { description: 'Update opportunity details', requiredParams: ['opportunityId'], optionalParams: ['name', 'stageId', 'status', 'value', 'source'] },
+
+  // Payments
+  'payments_get-order-by-id': { description: 'Fetch payment order details', requiredParams: ['orderId'], optionalParams: [] },
+  'payments_list-transactions': { description: 'List transactions', requiredParams: [], optionalParams: ['limit', 'skip', 'startDate', 'endDate'] }
 };
 
-// 🔧 FIX: validate token once on startup
+// Validate token once on startup
 if (!process.env.GHL_PIT_TOKEN) {
   console.error('❌ GHL_PIT_TOKEN environment variable is missing');
 }
@@ -67,7 +78,7 @@ router.post('/execute', async (req, res) => {
       'Authorization': `Bearer ${process.env.GHL_PIT_TOKEN}`,
       'locationId': locationId,
       'Content-Type': 'application/json',
-      'Accept': 'application/json, text/plain, */*', // 🔧 FIX: broader accept header
+      'Accept': 'application/json, text/plain, */*',
       'User-Agent': 'GHL-Gemini-Bridge/1.0.0'
     };
 
@@ -156,4 +167,8 @@ router.post('/test', async (req, res) => {
   }
 });
 
-module.exports = router;
+// ✅ Export both
+module.exports = {
+  router,
+  AVAILABLE_TOOLS
+};
