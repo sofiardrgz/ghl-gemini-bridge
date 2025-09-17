@@ -6,7 +6,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enhanced CORS configuration to fix 406 error
+// CORS configuration
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -14,11 +14,9 @@ app.use(cors({
   credentials: false
 }));
 
-// Middleware to handle Accept headers (fixes 406 error)
+// Force JSON response type
 app.use((req, res, next) => {
-  if (!req.headers.accept || req.headers.accept === '*/*') {
-    req.headers.accept = 'application/json, text/event-stream';
-  }
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
   next();
@@ -30,11 +28,11 @@ app.use(express.static('.'));
 const GHL_MCP_URL = 'https://services.leadconnectorhq.com/mcp/';
 const LOCATION_ID = 'Wj3JvHTBsQKqvP85ShhE';
 
-// Import your existing GHL routes
+// Import routes
 const ghlRoutes = require('./routes/ghl-actions');
 app.use('/api/ghl', ghlRoutes);
 
-// Tool definitions for ChatGPT MCP
+// Tool definitions
 const TOOLS = [
   {
     name: 'contacts_get-contacts',
@@ -121,11 +119,12 @@ const TOOLS = [
 async function executeGHLTool(toolName, parameters = {}) {
   try {
     console.log(`Executing GHL tool: ${toolName} with params:`, parameters);
-    
+
     const headers = {
       'Authorization': `Bearer ${process.env.GHL_PIT_TOKEN}`,
       'locationId': LOCATION_ID,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     };
 
     const requestData = {
@@ -133,11 +132,11 @@ async function executeGHLTool(toolName, parameters = {}) {
       input: parameters
     };
 
-    const response = await axios.post(GHL_MCP_URL, requestData, { 
+    const response = await axios.post(GHL_MCP_URL, requestData, {
       headers,
-      timeout: 30000 
+      timeout: 30000
     });
-    
+
     console.log(`GHL tool ${toolName} executed successfully`);
     return response.data;
   } catch (error) {
@@ -146,12 +145,10 @@ async function executeGHLTool(toolName, parameters = {}) {
   }
 }
 
-// MCP Protocol Endpoints for ChatGPT
-
-// Initialize - ChatGPT calls this first
+// MCP endpoints
 app.post('/initialize', (req, res) => {
   console.log('ChatGPT initializing MCP connection');
-  res.json({
+  res.status(200).json({
     protocolVersion: "2024-11-05",
     capabilities: {
       tools: {}
@@ -163,62 +160,42 @@ app.post('/initialize', (req, res) => {
   });
 });
 
-// List tools - ChatGPT calls this to get available tools
 app.post('/tools/list', (req, res) => {
   console.log('ChatGPT requesting tool list');
-  res.json({
-    tools: TOOLS
-  });
+  res.status(200).json({ tools: TOOLS });
 });
 
-// Call tool - ChatGPT calls this to execute a tool
 app.post('/tools/call', async (req, res) => {
   try {
     const { name, arguments: args } = req.body.params || {};
-    
+
     if (!name) {
       return res.status(400).json({
-        content: [{
-          type: "text",
-          text: "Error: Tool name is required"
-        }],
+        content: [{ type: "text", text: "Error: Tool name is required" }],
         isError: true
       });
     }
-    
+
     console.log(`ChatGPT calling tool: ${name}`, args);
-    
     const result = await executeGHLTool(name, args || {});
-    
-    res.json({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2)
-        }
-      ],
+
+    res.status(200).json({
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       isError: false
     });
-    
   } catch (error) {
     console.error(`Tool call failed: ${error.message}`);
-    
-    res.json({
-      content: [
-        {
-          type: "text",
-          text: `Error executing ${req.body.params?.name || 'unknown tool'}: ${error.message}`
-        }
-      ],
+    res.status(500).json({
+      content: [{ type: "text", text: `Error executing ${req.body.params?.name || 'unknown tool'}: ${error.message}` }],
       isError: true
     });
   }
 });
 
-// OAuth configuration endpoint (required by ChatGPT)
+// OAuth mock endpoints
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
   const baseUrl = 'https://ghl-gemini-bridge-1.onrender.com';
-  res.json({
+  res.status(200).json({
     issuer: baseUrl,
     authorization_endpoint: `${baseUrl}/oauth/authorize`,
     token_endpoint: `${baseUrl}/oauth/token`,
@@ -228,16 +205,14 @@ app.get('/.well-known/oauth-authorization-server', (req, res) => {
   });
 });
 
-// OAuth authorize endpoint (mock for ChatGPT compatibility)
 app.get('/oauth/authorize', (req, res) => {
   const { client_id, redirect_uri, state } = req.query;
   const authCode = 'mock_auth_code_12345';
   res.redirect(`${redirect_uri}?code=${authCode}&state=${state}`);
 });
 
-// OAuth token endpoint (mock for ChatGPT compatibility)
 app.post('/oauth/token', (req, res) => {
-  res.json({
+  res.status(200).json({
     access_token: 'mock_access_token',
     token_type: 'Bearer',
     expires_in: 3600
@@ -246,7 +221,7 @@ app.post('/oauth/token', (req, res) => {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     status: 'healthy',
     service: 'SmartSquatch ChatGPT MCP Server',
     timestamp: new Date().toISOString(),
@@ -255,29 +230,23 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Keep your chat interface
+// Chat UI
 app.get('/', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.sendFile(__dirname + '/chat.html');
 });
 
-// Test endpoint for Custom GPT Actions
-app.post('/test', async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      message: 'SmartSquatch server is working',
-      timestamp: new Date().toISOString(),
-      availableTools: TOOLS.map(t => t.name)
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
+// Test endpoint
+app.post('/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'SmartSquatch server is working',
+    timestamp: new Date().toISOString(),
+    availableTools: TOOLS.map(t => t.name)
+  });
 });
 
-// Handle preflight OPTIONS requests
+// Preflight
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -285,7 +254,7 @@ app.options('*', (req, res) => {
   res.sendStatus(200);
 });
 
-// Error handling middleware
+// Error handler
 app.use((error, req, res, next) => {
   console.error('Server error:', error);
   res.status(500).json({
@@ -301,7 +270,7 @@ app.use('*', (req, res) => {
     path: req.originalUrl,
     availableEndpoints: [
       'GET /',
-      'GET /health', 
+      'GET /health',
       'POST /initialize',
       'POST /tools/list',
       'POST /tools/call',
