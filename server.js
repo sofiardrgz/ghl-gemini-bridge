@@ -165,16 +165,6 @@ app.post('/tools/list', (req, res) => {
   res.status(200).json({ tools: TOOLS });
 });
 
-// Aliases so ChatGPT can send short names like "contacts" instead of "contacts_get-contacts"
-const TOOL_ALIASES = {
-  contacts: 'contacts_get-contacts',
-  createContact: 'contacts_create-contact',
-  getContact: 'contacts_get-contact',
-  opportunities: 'opportunities_search-opportunity',
-  conversations: 'conversations_search-conversation',
-  payments: 'payments_list-transactions',
-  calendar: 'calendars_get-calendar-events'
-};
 
 // Aliases so ChatGPT can send short names like "contacts" instead of "contacts_get-contacts"
 const TOOL_ALIASES = {
