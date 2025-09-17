@@ -172,3 +172,6 @@ module.exports = {
   router,
   AVAILABLE_TOOLS
 };
+  router,
+  AVAILABLE_TOOLS
+};
