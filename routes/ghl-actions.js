@@ -222,12 +222,12 @@ router.post('/execute', async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      success: false,
-      error: error.response?.data?.message || error.message,
-      details: error.response?.data,
-      timestamp: new Date().toISOString()
-    });
+res.status(500).json({
+  success: false,
+  error: error.response?.data?.message || error.message,
+  timestamp: new Date().toISOString()
+});
+
   }
 });
 
@@ -280,12 +280,13 @@ router.post('/test', async (req, res) => {
       timeout: 10000
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Connection to GHL MCP successful',
-      testTool: 'locations_get-location',
-      timestamp: new Date().toISOString()
-    });
+res.status(200).json({
+  success: true,
+  message: 'Connection to GHL MCP successful',
+  testTool: 'locations_get-location',
+  ghlResponse: testResult.data, // add this for more context
+  timestamp: new Date().toISOString()
+});
 
   } catch (error) {
     res.status(500).json({
