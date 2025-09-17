@@ -14,8 +14,8 @@ app.use(express.static('.'));
 const ghlRoutes = require('./routes/ghl-actions');
 app.use('/api/ghl', ghlRoutes);
 
-// Gemini AI setup
-const genAI = new GoogleGenerativeAI('AIzaSyAXWYXZ8BSybwa_FHXoR1Q27lr-z7ELhNs');
+// Gemini AI setup with your new API key
+const genAI = new GoogleGenerativeAI('AIzaSyAPpbE7BDRAIabsudUnzWKKpE1Sb9s7Blw');
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-pro",
   tools: [{
