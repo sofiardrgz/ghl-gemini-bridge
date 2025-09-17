@@ -184,6 +184,35 @@ app.post('/tools/call', async (req, res) => {
   }
 });
 
+// OAuth configuration endpoint (required by ChatGPT)
+app.get('/.well-known/oauth-authorization-server', (req, res) => {
+  res.json({
+    issuer: `${req.protocol}://${req.get('host')}`,
+    authorization_endpoint: `${req.protocol}://${req.get('host')}/oauth/authorize`,
+    token_endpoint: `${req.protocol}://${req.get('host')}/oauth/token`,
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code"],
+    scopes_supported: ["read", "write"]
+  });
+});
+
+// OAuth authorize endpoint (mock for ChatGPT compatibility)
+app.get('/oauth/authorize', (req, res) => {
+  const { client_id, redirect_uri, state } = req.query;
+  // Mock authorization - redirect back with fake code
+  const authCode = 'mock_auth_code_12345';
+  res.redirect(`${redirect_uri}?code=${authCode}&state=${state}`);
+});
+
+// OAuth token endpoint (mock for ChatGPT compatibility)
+app.post('/oauth/token', (req, res) => {
+  res.json({
+    access_token: 'mock_access_token',
+    token_type: 'Bearer',
+    expires_in: 3600
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
