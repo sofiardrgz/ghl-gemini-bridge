@@ -4,7 +4,15 @@ const router = express.Router();
 
 const GHL_MCP_URL = 'https://services.leadconnectorhq.com/mcp/';
 
-// Available GHL MCP tools with parameter info
+// Force JSON response headers for all routes in this router
+router.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  next();
+});
+
+// Available GHL MCP tools
 const AVAILABLE_TOOLS = {
   // Calendar Tools
   'calendars_get-calendar-events': {
@@ -136,7 +144,6 @@ router.post('/execute', async (req, res) => {
     
     console.log(`📞 Executing ${tool} for location ${locationId}`);
     
-    // Validate inputs
     if (!tool || !locationId) {
       return res.status(400).json({
         success: false,
@@ -145,7 +152,6 @@ router.post('/execute', async (req, res) => {
       });
     }
 
-    // Check if tool exists
     if (!AVAILABLE_TOOLS[tool]) {
       return res.status(400).json({
         success: false,
@@ -155,7 +161,6 @@ router.post('/execute', async (req, res) => {
       });
     }
 
-    // Check if GHL token is configured
     if (!process.env.GHL_PIT_TOKEN) {
       return res.status(500).json({
         success: false,
@@ -164,32 +169,28 @@ router.post('/execute', async (req, res) => {
       });
     }
 
-    // Prepare request to GHL MCP
     const headers = {
       'Authorization': `Bearer ${process.env.GHL_PIT_TOKEN}`,
       'locationId': locationId,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'User-Agent': 'GHL-Gemini-Bridge/1.0.0'
     };
 
-    const requestData = {
-      tool: tool,
-      input: parameters || {}
-    };
+    const requestData = { tool, input: parameters || {} };
 
     console.log(`🔄 Making request to GHL MCP:`, { tool, inputKeys: Object.keys(parameters || {}) });
 
-    // Make request to GHL MCP Server
     const response = await axios.post(GHL_MCP_URL, requestData, { 
       headers,
-      timeout: 30000 // 30 second timeout
+      timeout: 30000
     });
     
     console.log(`✅ GHL MCP response received for ${tool}`);
     
-    res.json({
+    res.status(200).json({
       success: true,
-      tool: tool,
+      tool,
       executedAt: new Date().toISOString(),
       data: response.data
     });
@@ -197,7 +198,6 @@ router.post('/execute', async (req, res) => {
   } catch (error) {
     console.error('❌ GHL MCP Error:', error.response?.data || error.message);
     
-    // Handle different error types
     if (error.code === 'ECONNABORTED') {
       return res.status(408).json({
         success: false,
@@ -231,9 +231,9 @@ router.post('/execute', async (req, res) => {
   }
 });
 
-// Get available tools with detailed info
+// Get available tools
 router.get('/tools', (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     totalTools: Object.keys(AVAILABLE_TOOLS).length,
     tools: AVAILABLE_TOOLS,
@@ -242,11 +242,11 @@ router.get('/tools', (req, res) => {
   });
 });
 
-// Health check endpoint
+// Health check
 router.get('/health', (req, res) => {
   const isConfigured = !!process.env.GHL_PIT_TOKEN;
   
-  res.json({ 
+  res.status(200).json({ 
     status: 'healthy',
     configured: isConfigured,
     timestamp: new Date().toISOString(),
@@ -255,7 +255,7 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Test endpoint for quick validation
+// Test endpoint
 router.post('/test', async (req, res) => {
   try {
     const { locationId } = req.body;
@@ -267,7 +267,6 @@ router.post('/test', async (req, res) => {
       });
     }
 
-    // Test with a simple tool that should work
     const testResult = await axios.post(GHL_MCP_URL, {
       tool: 'locations_get-location',
       input: {}
@@ -275,12 +274,13 @@ router.post('/test', async (req, res) => {
       headers: {
         'Authorization': `Bearer ${process.env.GHL_PIT_TOKEN}`,
         'locationId': locationId,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       timeout: 10000
     });
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Connection to GHL MCP successful',
       testTool: 'locations_get-location',
