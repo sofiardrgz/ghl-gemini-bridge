@@ -185,11 +185,13 @@ app.post('/tools/call', async (req, res) => {
 });
 
 // OAuth configuration endpoint (required by ChatGPT)
+// OAuth configuration endpoint (required by ChatGPT)
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
+  const baseUrl = 'https://ghl-gemini-bridge-1.onrender.com';
   res.json({
-    issuer: `${req.protocol}://${req.get('host')}`,
-    authorization_endpoint: `${req.protocol}://${req.get('host')}/oauth/authorize`,
-    token_endpoint: `${req.protocol}://${req.get('host')}/oauth/token`,
+    issuer: baseUrl,
+    authorization_endpoint: `${baseUrl}/oauth/authorize`,
+    token_endpoint: `${baseUrl}/oauth/token`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code"],
     scopes_supported: ["read", "write"]
