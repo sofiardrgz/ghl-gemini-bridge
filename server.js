@@ -165,9 +165,70 @@ app.post('/tools/list', (req, res) => {
   res.status(200).json({ tools: TOOLS });
 });
 
+// Aliases so ChatGPT can send short names like "contacts" instead of "contacts_get-contacts"
+const TOOL_ALIASES = {
+  contacts: 'contacts_get-contacts',
+  createContact: 'contacts_create-contact',
+  getContact: 'contacts_get-contact',
+  opportunities: 'opportunities_search-opportunity',
+  conversations: 'conversations_search-conversation',
+  payments: 'payments_list-transactions',
+  calendar: 'calendars_get-calendar-events'
+};
+
+// Aliases so ChatGPT can send short names like "contacts" instead of "contacts_get-contacts"
+const TOOL_ALIASES = {
+  // Calendar
+  calendars: 'calendars_get-calendar-events',
+  calendarEvents: 'calendars_get-calendar-events',
+  appointmentNotes: 'calendars_get-appointment-notes',
+
+  // Contacts
+  contacts: 'contacts_get-contacts',
+  listContacts: 'contacts_get-contacts',
+  createContact: 'contacts_create-contact',
+  addContact: 'contacts_create-contact',
+  getContact: 'contacts_get-contact',
+  updateContact: 'contacts_update-contact',
+  upsertContact: 'contacts_upsert-contact',
+  addTags: 'contacts_add-tags',
+  removeTags: 'contacts_remove-tags',
+  contactTasks: 'contacts_get-all-tasks',
+
+  // Conversations
+  conversations: 'conversations_search-conversation',
+  searchConversations: 'conversations_search-conversation',
+  getMessages: 'conversations_get-messages',
+  sendMessage: 'conversations_send-a-new-message',
+
+  // Opportunities
+  opportunities: 'opportunities_search-opportunity',
+  searchOpportunities: 'opportunities_search-opportunity',
+  getOpportunity: 'opportunities_get-opportunity',
+  updateOpportunity: 'opportunities_update-opportunity',
+  pipelines: 'opportunities_get-pipelines',
+
+  // Payments
+  payments: 'payments_list-transactions',
+  transactions: 'payments_list-transactions',
+  getOrder: 'payments_get-order-by-id',
+
+  // Locations
+  location: 'locations_get-location',
+  locationDetails: 'locations_get-location',
+  customFields: 'locations_get-custom-fields'
+};
+
+
+// Call tool - ChatGPT calls this to execute a tool
 app.post('/tools/call', async (req, res) => {
   try {
-    const { name, arguments: args } = req.body.params || {};
+    let { name, arguments: args } = req.body.params || {};
+
+    // Map shorthand names to full tool names
+    if (TOOL_ALIASES[name]) {
+      name = TOOL_ALIASES[name];
+    }
 
     if (!name) {
       return res.status(400).json({
@@ -191,6 +252,7 @@ app.post('/tools/call', async (req, res) => {
     });
   }
 });
+
 
 // OAuth mock endpoints
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
