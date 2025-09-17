@@ -34,87 +34,64 @@ app.use('/api/ghl', ghlRoutes);
 
 // Tool definitions
 const TOOLS = [
-  {
-    name: 'contacts_get-contacts',
-    description: 'Get all contacts from GoHighLevel CRM',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Maximum number of contacts to return' },
-        query: { type: 'string', description: 'Search query to filter contacts' }
-      }
-    }
-  },
-  {
-    name: 'contacts_create-contact',
-    description: 'Create a new contact in GoHighLevel',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        firstName: { type: 'string', description: 'First name' },
-        lastName: { type: 'string', description: 'Last name' },
-        email: { type: 'string', description: 'Email address' },
-        phone: { type: 'string', description: 'Phone number' }
-      }
-    }
-  },
-  {
-    name: 'contacts_get-contact',
-    description: 'Get specific contact details by ID',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        contactId: { type: 'string', description: 'Contact ID' }
-      },
-      required: ['contactId']
-    }
-  },
-  {
-    name: 'opportunities_search-opportunity',
-    description: 'Search for opportunities and deals in sales pipeline',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Search query' },
-        limit: { type: 'number', description: 'Maximum results' }
-      }
-    }
-  },
-  {
-    name: 'conversations_search-conversation',
-    description: 'Search conversations and messages',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Search query' },
-        limit: { type: 'number', description: 'Maximum results' }
-      }
-    }
-  },
-  {
-    name: 'payments_list-transactions',
-    description: 'List payment transactions and order history',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Maximum results' },
-        startDate: { type: 'string', description: 'Start date filter (YYYY-MM-DD)' },
-        endDate: { type: 'string', description: 'End date filter (YYYY-MM-DD)' }
-      }
-    }
-  },
+  // Calendars
   {
     name: 'calendars_get-calendar-events',
-    description: 'Get calendar events and appointments',
+    description: 'Get calendar events (requires userId, groupId, or calendarId)',
     inputSchema: {
       type: 'object',
       properties: {
-        calendarId: { type: 'string', description: 'Calendar ID' },
-        limit: { type: 'number', description: 'Maximum results' }
+        calendarId: { type: 'string' },
+        userId: { type: 'string' },
+        groupId: { type: 'string' },
+        startTime: { type: 'string' },
+        endTime: { type: 'string' },
+        limit: { type: 'number' }
       }
     }
-  }
+  },
+  {
+    name: 'calendars_get-appointment-notes',
+    description: 'Retrieve appointment notes',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        appointmentId: { type: 'string' }
+      },
+      required: ['appointmentId']
+    }
+  },
+
+  // Contacts
+  { name: 'contacts_get-all-tasks', description: 'Get all tasks for a contact', inputSchema: { type: 'object', properties: { contactId: { type: 'string' } }, required: ['contactId'] } },
+  { name: 'contacts_add-tags', description: 'Add tags to a contact', inputSchema: { type: 'object', properties: { contactId: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } }, required: ['contactId', 'tags'] } },
+  { name: 'contacts_remove-tags', description: 'Remove tags from a contact', inputSchema: { type: 'object', properties: { contactId: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } }, required: ['contactId', 'tags'] } },
+  { name: 'contacts_get-contact', description: 'Fetch contact details', inputSchema: { type: 'object', properties: { contactId: { type: 'string' } }, required: ['contactId'] } },
+  { name: 'contacts_update-contact', description: 'Update a contact', inputSchema: { type: 'object', properties: { contactId: { type: 'string' }, firstName: { type: 'string' }, lastName: { type: 'string' }, email: { type: 'string' }, phone: { type: 'string' }, customFields: { type: 'object' } }, required: ['contactId'] } },
+  { name: 'contacts_upsert-contact', description: 'Update or create a contact', inputSchema: { type: 'object', properties: { firstName: { type: 'string' }, lastName: { type: 'string' }, email: { type: 'string' }, phone: { type: 'string' }, customFields: { type: 'object' } } } },
+  { name: 'contacts_create-contact', description: 'Create a contact', inputSchema: { type: 'object', properties: { firstName: { type: 'string' }, lastName: { type: 'string' }, email: { type: 'string' }, phone: { type: 'string' }, customFields: { type: 'object' } } } },
+  { name: 'contacts_get-contacts', description: 'Get contacts from GHL', inputSchema: { type: 'object', properties: { limit: { type: 'number' }, skip: { type: 'number' }, query: { type: 'string' } } } },
+
+  // Conversations
+  { name: 'conversations_search-conversation', description: 'Search/filter/sort conversations', inputSchema: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'number' }, skip: { type: 'number' } } } },
+  { name: 'conversations_get-messages', description: 'Get messages by conversation ID', inputSchema: { type: 'object', properties: { conversationId: { type: 'string' }, limit: { type: 'number' }, skip: { type: 'number' } }, required: ['conversationId'] } },
+  { name: 'conversations_send-a-new-message', description: 'Send a message to a conversation', inputSchema: { type: 'object', properties: { conversationId: { type: 'string' }, message: { type: 'string' }, type: { type: 'string' } }, required: ['conversationId', 'message'] } },
+
+  // Locations
+  { name: 'locations_get-location', description: 'Get location details', inputSchema: { type: 'object', properties: {} } },
+  { name: 'locations_get-custom-fields', description: 'Get custom fields for a location', inputSchema: { type: 'object', properties: {} } },
+
+  // Opportunities
+  { name: 'opportunities_search-opportunity', description: 'Search for opportunities', inputSchema: { type: 'object', properties: { query: { type: 'string' }, pipelineId: { type: 'string' }, stageId: { type: 'string' }, limit: { type: 'number' }, skip: { type: 'number' } } } },
+  { name: 'opportunities_get-pipelines', description: 'Retrieve all pipelines', inputSchema: { type: 'object', properties: {} } },
+  { name: 'opportunities_get-opportunity', description: 'Fetch opportunity details', inputSchema: { type: 'object', properties: { opportunityId: { type: 'string' } }, required: ['opportunityId'] } },
+  { name: 'opportunities_update-opportunity', description: 'Update an opportunity', inputSchema: { type: 'object', properties: { opportunityId: { type: 'string' }, name: { type: 'string' }, stageId: { type: 'string' }, status: { type: 'string' }, value: { type: 'number' }, source: { type: 'string' } }, required: ['opportunityId'] } },
+
+  // Payments
+  { name: 'payments_get-order-by-id', description: 'Fetch order details', inputSchema: { type: 'object', properties: { orderId: { type: 'string' } }, required: ['orderId'] } },
+  { name: 'payments_list-transactions', description: 'List transactions', inputSchema: { type: 'object', properties: { limit: { type: 'number' }, skip: { type: 'number' }, startDate: { type: 'string' }, endDate: { type: 'string' } } } }
 ];
+
 
 async function executeGHLTool(toolName, parameters = {}) {
   try {
