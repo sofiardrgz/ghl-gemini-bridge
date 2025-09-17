@@ -1,17 +1,17 @@
 const express = require('express');
 const cors = require('cors');
 
-// Import router and tools from ghl-actions.js
+// Import router + tools from ghl-actions.js
 const { router: ghlRoutes, AVAILABLE_TOOLS } = require('./routes/ghl-actions');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Mount the GHL routes
+// Mount all GHL routes under /api/ghl
 app.use('/api/ghl', ghlRoutes);
 
-// Tools list endpoint (for MCP clients like ChatGPT)
+// Tools list (used by ChatGPT MCP)
 app.post('/tools/list', (req, res) => {
   const tools = Object.entries(AVAILABLE_TOOLS).map(([name, def]) => ({
     name,
